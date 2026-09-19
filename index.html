@@ -66,9 +66,10 @@
   .add-row {
     display: flex;
     gap: 8px;
+    align-items: flex-end;
   }
 
-  input[type="text"] {
+  textarea {
     flex: 1;
     padding: 12px 14px;
     border-radius: 12px;
@@ -76,10 +77,19 @@
     font-size: 1rem;
     outline: none;
     min-width: 0;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 46px;
   }
 
-  input[type="text"]:focus {
+  textarea:focus {
     border-color: var(--accent2);
+  }
+
+  .add-hint {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 6px 0 0;
   }
 
   button {
@@ -257,9 +267,10 @@
   <div class="card">
     <h2>Students</h2>
     <div class="add-row">
-      <input type="text" id="nameInput" placeholder="Type a first name and press Enter" autocomplete="off">
+      <textarea id="nameInput" rows="3" placeholder="Type a name, or paste a whole list (one name per line)"></textarea>
       <button class="btn-add" id="addBtn">Add</button>
     </div>
+    <p class="add-hint">Tip: paste a whole class list at once, one name per line. Press Ctrl+Enter (Cmd+Enter on Mac) to add without clicking.</p>
     <div class="chips" id="chips"></div>
     <p class="empty-hint" id="emptyHint">No students added yet.</p>
   </div>
@@ -361,27 +372,32 @@
     });
   }
 
-  function addName() {
-    const raw = nameInput.value.trim();
-    if (!raw) return;
-    const exists = state.remaining.some(n => n.toLowerCase() === raw.toLowerCase());
-    if (exists) {
-      nameInput.value = '';
-      nameInput.focus();
-      return;
-    }
-    state.remaining.push(raw);
+  function addNames() {
+    const lines = nameInput.value
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    if (!lines.length) return;
+
+    const existingLower = new Set(state.remaining.map(n => n.toLowerCase()));
+    lines.forEach(name => {
+      const key = name.toLowerCase();
+      if (existingLower.has(key)) return;
+      existingLower.add(key);
+      state.remaining.push(name);
+    });
+
     nameInput.value = '';
     nameInput.focus();
     saveState();
     render();
   }
 
-  addBtn.addEventListener('click', addName);
+  addBtn.addEventListener('click', addNames);
   nameInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      addName();
+      addNames();
     }
   });
 
