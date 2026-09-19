@@ -166,29 +166,40 @@
     justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
-    min-height: 76px;
+    min-height: 56px;
     margin-bottom: 18px;
   }
 
   .slot {
+    position: relative;
+    overflow: hidden;
+    width: 130px;
+    height: 56px;
     background: linear-gradient(135deg, var(--accent2), var(--accent));
-    color: #fff;
-    font-size: 1.2rem;
-    font-weight: 700;
-    padding: 16px 18px;
     border-radius: 14px;
-    min-width: 110px;
     box-shadow: 0 8px 18px rgba(106,92,255,0.35);
   }
 
-  .slot.spinning {
-    animation: pulse 0.12s linear infinite;
+  .reel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    will-change: transform;
   }
 
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.04); }
-    100% { transform: scale(1); }
+  .reel-item {
+    height: 56px;
+    line-height: 56px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    text-align: center;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .slot.landed {
@@ -407,52 +418,78 @@
     return state.remaining.length === 3 ? 3 : 2;
   }
 
+  const ITEM_HEIGHT = 56;
+  const REEL_LENGTH = 18;
+  const SPIN_DURATION = 850;
+  const SLOT_STAGGER = 250;
+
+  function spinSlot(slot, finalName, direction, pool, onDone) {
+    const fillerSource = pool.length ? pool : [finalName];
+    const fillers = [];
+    for (let k = 0; k < REEL_LENGTH - 1; k++) {
+      fillers.push(fillerSource[Math.floor(Math.random() * fillerSource.length)]);
+    }
+    const order = direction === 'up' ? fillers.concat([finalName]) : [finalName].concat(fillers);
+
+    const reel = document.createElement('div');
+    reel.className = 'reel';
+    order.forEach(name => {
+      const item = document.createElement('div');
+      item.className = 'reel-item';
+      item.textContent = name;
+      reel.appendChild(item);
+    });
+
+    slot.innerHTML = '';
+    slot.appendChild(reel);
+
+    const travel = (REEL_LENGTH - 1) * ITEM_HEIGHT;
+    const startY = direction === 'up' ? 0 : -travel;
+    const endY = direction === 'up' ? -travel : 0;
+
+    reel.style.transition = 'none';
+    reel.style.transform = 'translateY(' + startY + 'px)';
+    void reel.offsetHeight; // force reflow so the start position takes effect before animating
+
+    requestAnimationFrame(() => {
+      reel.style.transition = 'transform ' + SPIN_DURATION + 'ms cubic-bezier(0.12, 0.8, 0.25, 1)';
+      reel.style.transform = 'translateY(' + endY + 'px)';
+    });
+
+    reel.addEventListener('transitionend', function onEnd() {
+      reel.removeEventListener('transitionend', onEnd);
+      slot.classList.add('landed');
+      if (onDone) onDone();
+    });
+  }
+
   function drawPair() {
     if (spinning || state.remaining.length < 2) return;
     spinning = true;
     drawBtn.disabled = true;
 
     const groupSize = pickGroupSize();
+    const pool = state.remaining;
+    const chosen = [...pool].sort(() => Math.random() - 0.5).slice(0, groupSize);
 
     slotsEl.innerHTML = '';
-    const slotBoxes = [];
-    for (let i = 0; i < groupSize; i++) {
-      const box = document.createElement('div');
-      box.className = 'slot spinning';
-      box.textContent = '?';
-      slotsEl.appendChild(box);
-      slotBoxes.push(box);
-    }
+    chosen.forEach((name, i) => {
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      slotsEl.appendChild(slot);
 
-    const pool = state.remaining;
-    let ticks = 0;
-    const maxTicks = 14;
-
-    const interval = setInterval(() => {
-      slotBoxes.forEach(box => {
-        box.textContent = pool[Math.floor(Math.random() * pool.length)];
-      });
-      ticks++;
-      if (ticks >= maxTicks) {
-        clearInterval(interval);
-        finishDraw(groupSize, slotBoxes);
-      }
-    }, 90);
+      const direction = i % 2 === 0 ? 'up' : 'down';
+      const isLast = i === chosen.length - 1;
+      setTimeout(() => {
+        spinSlot(slot, name, direction, pool, isLast ? () => finishDraw(chosen) : null);
+      }, i * SLOT_STAGGER);
+    });
   }
 
-  function finishDraw(groupSize, slotBoxes) {
-    const shuffled = [...state.remaining].sort(() => Math.random() - 0.5);
-    const chosen = shuffled.slice(0, groupSize);
-
+  function finishDraw(chosen) {
     chosen.forEach(name => {
       const idx = state.remaining.indexOf(name);
       if (idx !== -1) state.remaining.splice(idx, 1);
-    });
-
-    slotBoxes.forEach((box, i) => {
-      box.classList.remove('spinning');
-      box.classList.add('landed');
-      box.textContent = chosen[i];
     });
 
     state.pairs.push(chosen);
