@@ -425,9 +425,9 @@
   }
 
   const ITEM_HEIGHT = 56;
-  const REEL_LENGTH = 22;
-  const SPIN_DURATION = 1300;
-  const PAUSE_BETWEEN_SLOTS = 300;
+  const REEL_LENGTH = 26;
+  const SPIN_DURATION = 1700;
+  const SLOT_START_DELAY = SPIN_DURATION / 2;
 
   function spinSlot(slot, finalName, direction, pool, onDone) {
     const fillerSource = pool.length ? pool : [finalName];
@@ -479,26 +479,20 @@
     const chosen = [...pool].sort(() => Math.random() - 0.5).slice(0, groupSize);
 
     slotsEl.innerHTML = '';
-    const slotEls = chosen.map(() => {
+    let landedCount = 0;
+    chosen.forEach((name, i) => {
       const slot = document.createElement('div');
       slot.className = 'slot';
       slotsEl.appendChild(slot);
-      return slot;
-    });
 
-    let i = 0;
-    function spinNext() {
-      if (i >= chosen.length) {
-        finishDraw(chosen);
-        return;
-      }
       const direction = i % 2 === 0 ? 'up' : 'down';
-      spinSlot(slotEls[i], chosen[i], direction, pool, () => {
-        i++;
-        setTimeout(spinNext, PAUSE_BETWEEN_SLOTS);
-      });
-    }
-    spinNext();
+      setTimeout(() => {
+        spinSlot(slot, name, direction, pool, () => {
+          landedCount++;
+          if (landedCount === chosen.length) finishDraw(chosen);
+        });
+      }, i * SLOT_START_DELAY);
+    });
   }
 
   function finishDraw(chosen) {
