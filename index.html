@@ -363,8 +363,14 @@
     });
 
     emptyHint.style.display = state.remaining.length === 0 ? 'block' : 'none';
-    countLine.innerHTML = '<strong>' + state.remaining.length + '</strong> student' +
-      (state.remaining.length === 1 ? '' : 's') + ' left to pair';
+    if (state.remaining.length === 0 && state.pairs.length > 0) {
+      countLine.textContent = 'Everyone is paired up! Add more names above to spin again.';
+    } else if (state.remaining.length === 1) {
+      countLine.textContent = '1 student left — add one more to draw again.';
+    } else {
+      countLine.innerHTML = '<strong>' + state.remaining.length + '</strong> student' +
+        (state.remaining.length === 1 ? '' : 's') + ' left to pair';
+    }
 
     drawBtn.disabled = spinning || state.remaining.length < 2;
 
@@ -419,9 +425,9 @@
   }
 
   const ITEM_HEIGHT = 56;
-  const REEL_LENGTH = 18;
-  const SPIN_DURATION = 850;
-  const SLOT_STAGGER = 250;
+  const REEL_LENGTH = 22;
+  const SPIN_DURATION = 1300;
+  const PAUSE_BETWEEN_SLOTS = 300;
 
   function spinSlot(slot, finalName, direction, pool, onDone) {
     const fillerSource = pool.length ? pool : [finalName];
@@ -473,17 +479,26 @@
     const chosen = [...pool].sort(() => Math.random() - 0.5).slice(0, groupSize);
 
     slotsEl.innerHTML = '';
-    chosen.forEach((name, i) => {
+    const slotEls = chosen.map(() => {
       const slot = document.createElement('div');
       slot.className = 'slot';
       slotsEl.appendChild(slot);
-
-      const direction = i % 2 === 0 ? 'up' : 'down';
-      const isLast = i === chosen.length - 1;
-      setTimeout(() => {
-        spinSlot(slot, name, direction, pool, isLast ? () => finishDraw(chosen) : null);
-      }, i * SLOT_STAGGER);
+      return slot;
     });
+
+    let i = 0;
+    function spinNext() {
+      if (i >= chosen.length) {
+        finishDraw(chosen);
+        return;
+      }
+      const direction = i % 2 === 0 ? 'up' : 'down';
+      spinSlot(slotEls[i], chosen[i], direction, pool, () => {
+        i++;
+        setTimeout(spinNext, PAUSE_BETWEEN_SLOTS);
+      });
+    }
+    spinNext();
   }
 
   function finishDraw(chosen) {
