@@ -332,8 +332,8 @@
   <div class="footer-actions" id="resetArea">
     <button class="btn-reset" id="resetBtn">Start over</button>
     <span class="reset-confirm" id="resetConfirm" hidden>
-      Clear everyone and start over?
-      <button class="btn-reset-yes" id="resetYesBtn">Yes, clear it</button>
+      Clear the drawn pairs and start a new round? Names stay in the list.
+      <button class="btn-reset-yes" id="resetYesBtn">Yes, start over</button>
       <button class="btn-reset-no" id="resetNoBtn">Cancel</button>
     </span>
   </div>
@@ -559,7 +559,8 @@
   });
 
   resetYesBtn.addEventListener('click', () => {
-    state = { remaining: [], pairs: [] };
+    const everyone = state.remaining.concat(state.pairs.flat());
+    state = { remaining: everyone, pairs: [] };
     slotsEl.innerHTML = '';
     resetConfirm.hidden = true;
     resetBtn.hidden = false;
