@@ -268,6 +268,37 @@
     font-size: 0.9rem;
     padding: 8px;
   }
+
+  .footer-actions {
+    flex-wrap: wrap;
+  }
+
+  .reset-confirm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+
+  .btn-reset-yes,
+  .btn-reset-no {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+
+  .btn-reset-yes {
+    background: #fff;
+    color: var(--accent2);
+  }
+
+  .btn-reset-no {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+  }
 </style>
 </head>
 <body>
@@ -298,8 +329,13 @@
     <ul class="pairs-list" id="pairsList"></ul>
   </div>
 
-  <div class="footer-actions">
+  <div class="footer-actions" id="resetArea">
     <button class="btn-reset" id="resetBtn">Start over</button>
+    <span class="reset-confirm" id="resetConfirm" hidden>
+      Clear everyone and start over?
+      <button class="btn-reset-yes" id="resetYesBtn">Yes, clear it</button>
+      <button class="btn-reset-no" id="resetNoBtn">Cancel</button>
+    </span>
   </div>
 </div>
 
@@ -317,6 +353,9 @@
   const pairsCard = document.getElementById('pairsCard');
   const pairsList = document.getElementById('pairsList');
   const resetBtn = document.getElementById('resetBtn');
+  const resetConfirm = document.getElementById('resetConfirm');
+  const resetYesBtn = document.getElementById('resetYesBtn');
+  const resetNoBtn = document.getElementById('resetNoBtn');
 
   let state = loadState() || { remaining: [], pairs: [] };
   let spinning = false;
@@ -510,9 +549,20 @@
   drawBtn.addEventListener('click', drawPair);
 
   resetBtn.addEventListener('click', () => {
-    if (!confirm('Clear all students and pairs and start over?')) return;
+    resetBtn.hidden = true;
+    resetConfirm.hidden = false;
+  });
+
+  resetNoBtn.addEventListener('click', () => {
+    resetConfirm.hidden = true;
+    resetBtn.hidden = false;
+  });
+
+  resetYesBtn.addEventListener('click', () => {
     state = { remaining: [], pairs: [] };
     slotsEl.innerHTML = '';
+    resetConfirm.hidden = true;
+    resetBtn.hidden = false;
     saveState();
     render();
   });
